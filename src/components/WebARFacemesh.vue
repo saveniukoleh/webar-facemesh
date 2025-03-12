@@ -122,21 +122,30 @@ export default {
       const rightEye = landmarks[133] // Right eye landmark
       const leftX = (leftEye.x - 0.5) * 16 // Adjust for plane size
       const leftY = (0.5 - leftEye.y) * 9 // Adjust for plane size
+      const leftZ = 0.1 + leftEye.z / 5 // Adjust for plane size
       const rightX = (rightEye.x - 0.5) * 16 // Adjust for plane size
       const rightY = (0.5 - rightEye.y) * 9 // Adjust for plane size
+      const rightZ = 0.1 + rightEye.z / 5 // Adjust for plane size
       // Calculate the center position for the glasses
       const centerX = (leftX + rightX) / 2
       const centerY = (leftY + rightY) / 2
-      // glassesMesh.position.set(centerX + 0.5, centerY + 0.1, 0.1) // Position above the eyes
+      const centerZ = (leftZ + rightZ) / 2
+      console.log(centerX, centerY, centerZ)
+      glassesMesh.position.set(
+        (landmarks[8].x - 0.5) * 16,
+        (0.5 - landmarks[8].y) * 9 - 1.25,
+        0.1 + landmarks[8].z + 0.25
+      ) // Position above the eyes
+      // glassesMesh.position.set(centerX, centerY, centerZ) // Position above the eyes
       // Calculate the direction vector from left to right eye
       const direction = new THREE.Vector3(
         rightX - leftX,
         rightY - leftY,
-        0
+        rightZ - leftZ
       ).normalize()
       // Calculate the angle for rotation
       const angle = Math.atan2(direction.y, direction.x) // Get angle in radians
-      glassesMesh.rotation.z = angle // Rotate around the Z-axis to face the direction
+      // glassesMesh.rotation.z = angle // Rotate around the Z-axis to face the direction
     }
     const prepareGlasses = () => {
       // Load the glasses model
@@ -167,9 +176,18 @@ export default {
           // })
           glassesMesh.name = 'glasses' // Name for identification
           glassesMesh.position.set(0, 0, 0) // Position above the eyes
+          // Create a sphere
+          const geometry = new THREE.SphereGeometry(0.05, 32, 32) // Radius, width segments, height segments
+          const material = new THREE.MeshStandardMaterial({
+            color: 0x0077ff,
+            wireframe: false
+          }) // Color and material type
+          const sphere = new THREE.Mesh(geometry, material)
+          scene.add(sphere)
           // glassesMesh.scale.set(1.5, 1.5, 1.5)
           // glassesMesh.scale.set(100, 100, 100)
-          glassesMesh.scale.set(0.1, 0.1, 0.1)
+          glassesMesh.scale.set(0.25, 0.25, 0.25)
+          glassesMesh.rotation.y = -Math.PI / 2
           // glassesMesh.visible = false
           console.log(glassesMesh)
           scene.add(glassesMesh) // Add to the scene
@@ -194,7 +212,7 @@ export default {
       landmarks.forEach((landmark, index) => {
         let x = (landmark.x - 0.5) * 16 // Adjust for plane size
         let y = (0.5 - landmark.y) * 9 // Adjust for plane size
-        let z = 0.1 // Slightly in front of the video plane
+        let z = 0.1 + landmark.z / 5 // Slightly in front of the video plane
         if (
           Math.abs(previousFaceMaskLandmarksPosition[index].x - x) >
             landmarkThreshold ||
@@ -255,9 +273,6 @@ export default {
         video.srcObject.getTracks().forEach((track) => track.stop()) // Stop webcam tracks
       }
       window.removeEventListener('resize', onWindowResize) // Clean up resize event listener
-      if (stats) {
-        document.body.removeChild(stats.dom) // Remove stats from the DOM
-      }
     }
     onMounted(init) // Initialize on component mount
     onBeforeUnmount(cleanup) // Clean up on component unmount
