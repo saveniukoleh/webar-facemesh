@@ -22,6 +22,7 @@ export default {
       faceMaskLandmarks,
       previousFaceMaskLandmarksPosition,
       landmarkThreshold = 0.1,
+      glassesMesh,
       stats // Declare variables
     const init = async () => {
       // Initialize Stats.js
@@ -57,11 +58,14 @@ export default {
       const geometry = new THREE.PlaneGeometry(16, 9) // Aspect ratio 16:9
       const material = new THREE.MeshBasicMaterial({ map: videoTexture })
       const plane = new THREE.Mesh(geometry, material)
+      plane.position.z = 0
       scene.add(plane) // Add video plane to the scene
       // Position the camera
       camera.position.z = 5
       // Prepare face mask landmarks
       prepareLandmarks()
+      // Prepare glasses
+      prepareGlasses()
       // Start the animation loop
       animate()
       // Initialize FaceMesh
@@ -72,6 +76,7 @@ export default {
         // Request access to the webcam with maximum quality settings
         const stream = await navigator.mediaDevices.getUserMedia({
           video: {
+            facingMode: { exact: 'user' },
             width: { ideal: 1920 }, // Set ideal width (e.g., 1920 for Full HD)
             height: { ideal: 1080 }, // Set ideal height (e.g., 1080 for Full HD)
             frameRate: { ideal: 60 } // Set ideal frame rate (e.g., 60 fps)
@@ -111,72 +116,80 @@ export default {
       }
     }
     const drawGlasses = (landmarks) => {
-      // Clear previous glasses (if any)
-      //   const existingGlasses = scene.getObjectByName('glasses')
-      //   if (existingGlasses) {
-      //     scene.remove(existingGlasses) // Remove previous glasses
-      //   }
-      //   // Get the positions for the eyes from the landmarks
-      //   const leftEye = landmarks[33] // Left eye landmark
-      //   const rightEye = landmarks[133] // Right eye landmark
-      //   const leftX = (leftEye.x - 0.5) * 16 // Adjust for plane size
-      //   const leftY = (0.5 - leftEye.y) * 9 // Adjust for plane size
-      //   const rightX = (rightEye.x - 0.5) * 16 // Adjust for plane size
-      //   const rightY = (0.5 - rightEye.y) * 9 // Adjust for plane size
-      //   // Calculate the center position for the glasses
-      //   const centerX = (leftX + rightX) / 2
-      //   const centerY = (leftY + rightY) / 2
-      //   // Load the glasses model
-      //   const loader = new GLTFLoader()
-      //   const textureLoader = new TextureLoader()
-      //   // Load the textures
-      //   const baseColorTexture = textureLoader.load(
-      //     'glasses/textures/Handles_baseColor.jpeg'
-      //   )
-      //   const metallicRoughnessTexture = textureLoader.load(
-      //     'glasses/textures/Handles_metallicRoughness.png'
-      //   )
-      //   loader.load(
-      //     'glasses/scene.gltf',
-      //     (gltf) => {
-      //       const glassesMesh = gltf.scene
-      //       // console.log(glassesMesh)
-      //       // Traverse the model and apply textures
-      //       glassesMesh.traverse((child) => {
-      //         if (child.isMesh) {
-      //           child.material = new THREE.MeshStandardMaterial({
-      //             map: baseColorTexture, // Base color texture
-      //             metalnessMap: metallicRoughnessTexture, // Metallic roughness texture
-      //             metalness: 1.0, // Adjust based on your needs
-      //             roughness: 0.5 // Adjust based on your needs
-      //           })
-      //         }
-      //       })
-      //       glassesMesh.name = 'glasses' // Name for identification
-      //       glassesMesh.position.set(centerX + 0.5, centerY + 0.1, 0.1) // Position above the eyes
-      //       glassesMesh.scale.set(1.5, 1.5, 1.5)
-      //       // Calculate the direction vector from left to right eye
-      //       const direction = new THREE.Vector3(
-      //         rightX - leftX,
-      //         rightY - leftY,
-      //         0
-      //       ).normalize()
-      //       // Calculate the angle for rotation
-      //       const angle = Math.atan2(direction.y, direction.x) // Get angle in radians
-      //       glassesMesh.rotation.z = angle // Rotate around the Z-axis to face the direction
-      //       scene.add(glassesMesh) // Add to the scene
-      //     },
-      //     undefined,
-      //     (error) => {
-      //       console.error(
-      //         'An error occurred while loading the glasses model:',
-      //         error
-      //       )
-      //     }
-      //   )
+      if (!glassesMesh.visible) glassesMesh.visible = true
+      // Get the positions for the eyes from the landmarks
+      const leftEye = landmarks[33] // Left eye landmark
+      const rightEye = landmarks[133] // Right eye landmark
+      const leftX = (leftEye.x - 0.5) * 16 // Adjust for plane size
+      const leftY = (0.5 - leftEye.y) * 9 // Adjust for plane size
+      const rightX = (rightEye.x - 0.5) * 16 // Adjust for plane size
+      const rightY = (0.5 - rightEye.y) * 9 // Adjust for plane size
+      // Calculate the center position for the glasses
+      const centerX = (leftX + rightX) / 2
+      const centerY = (leftY + rightY) / 2
+      // glassesMesh.position.set(centerX + 0.5, centerY + 0.1, 0.1) // Position above the eyes
+      // Calculate the direction vector from left to right eye
+      const direction = new THREE.Vector3(
+        rightX - leftX,
+        rightY - leftY,
+        0
+      ).normalize()
+      // Calculate the angle for rotation
+      const angle = Math.atan2(direction.y, direction.x) // Get angle in radians
+      glassesMesh.rotation.z = angle // Rotate around the Z-axis to face the direction
+    }
+    const prepareGlasses = () => {
+      // Load the glasses model
+      const loader = new GLTFLoader()
+      const textureLoader = new TextureLoader()
+      // Load the textures
+      const baseColorTexture = textureLoader.load(
+        'glasses/textures/Handles_baseColor.jpeg'
+      )
+      const metallicRoughnessTexture = textureLoader.load(
+        'glasses/textures/Handles_metallicRoughness.png'
+      )
+      loader.load(
+        'glasses-1/scene.gltf',
+        (gltf) => {
+          glassesMesh = gltf.scene
+          // console.log(glassesMesh)
+          // Traverse the model and apply textures
+          // glassesMesh.traverse((child) => {
+          //   if (child.isMesh) {
+          //     child.material = new THREE.MeshStandardMaterial({
+          //       map: baseColorTexture, // Base color texture
+          //       metalnessMap: metallicRoughnessTexture, // Metallic roughness texture
+          //       metalness: 1.0, // Adjust based on your needs
+          //       roughness: 0.5 // Adjust based on your needs
+          //     })
+          //   }
+          // })
+          glassesMesh.name = 'glasses' // Name for identification
+          glassesMesh.position.set(0, 0, 0) // Position above the eyes
+          // glassesMesh.scale.set(1.5, 1.5, 1.5)
+          // glassesMesh.scale.set(100, 100, 100)
+          glassesMesh.scale.set(0.1, 0.1, 0.1)
+          // glassesMesh.visible = false
+          console.log(glassesMesh)
+          scene.add(glassesMesh) // Add to the scene
+        },
+        undefined,
+        (error) => {
+          console.error(
+            'An error occurred while loading the glasses model:',
+            error
+          )
+        }
+      )
     }
     const drawFaceMask = (landmarks) => {
       if (!faceMaskLandmarks.visible) faceMaskLandmarks.visible = true
+      console.log(
+        landmarks[33].x.toFixed(2),
+        landmarks[33].y.toFixed(2),
+        landmarks[33].z.toFixed(5)
+      )
       // Create objects at each landmark
       landmarks.forEach((landmark, index) => {
         let x = (landmark.x - 0.5) * 16 // Adjust for plane size
