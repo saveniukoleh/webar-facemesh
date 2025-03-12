@@ -1,14 +1,14 @@
 <template>
-  <WebcamView />
+  <WebARFacemesh />
 </template>
 
 <script>
-import WebcamView from './components/WebcamView.vue'
+import WebARFacemesh from './components/WebARFacemesh.vue'
 
 export default {
   name: 'App',
   components: {
-    WebcamView
+    WebARFacemesh
   }
 }
 </script>
